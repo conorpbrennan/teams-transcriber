@@ -1,0 +1,11 @@
+# Recorded meeting transcripts (private)
+transcripts/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Editor swap files
+*.swp
+*.swo
+*~
