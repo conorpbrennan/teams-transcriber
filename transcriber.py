@@ -178,6 +178,30 @@ def chrome_binary():
     return None
 
 
+def display_env():
+    """Display vars Chrome needs, pulled live from the systemd --user environment.
+
+    When started at boot, this service's own environment has no DISPLAY/XAUTHORITY
+    (GNOME imports them into the user manager only once the graphical session is
+    up, which can be after we start). Querying systemd at launch time gets the
+    current values and tracks the XAUTHORITY filename, whose suffix changes every
+    login. Without these Chrome cannot reach the display and exits silently, so
+    the debug port never opens and we loop relaunching forever.
+    """
+    env = dict(os.environ)
+    try:
+        out = subprocess.run(["systemctl", "--user", "show-environment"],
+                             capture_output=True, text=True, timeout=5).stdout
+    except (OSError, subprocess.SubprocessError):
+        return env
+    wanted = ("DISPLAY", "XAUTHORITY", "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR")
+    for line in out.splitlines():
+        key, _, val = line.partition("=")
+        if key in wanted and val:
+            env[key] = val
+    return env
+
+
 def launch_chrome():
     """Start a debugging-enabled Chrome on a dedicated profile (login persists)."""
     binary = chrome_binary()
@@ -199,6 +223,7 @@ def launch_chrome():
          f"--user-data-dir={CHROME_PROFILE}", "--no-first-run",
          "--no-default-browser-check", TEAMS_URL],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
+        env=display_env(),
     )
     for _ in range(40):
         if chrome_alive():
