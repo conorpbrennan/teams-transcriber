@@ -185,6 +185,14 @@ def launch_chrome():
         log("[error] no Chrome/Chromium binary found")
         return False
     os.makedirs(CHROME_PROFILE, exist_ok=True)
+    # Remove stale singleton locks left by a crashed/zombie Chrome. Otherwise a
+    # new launch "hands off" to the dead instance and exits immediately, so the
+    # debug port never opens and we loop forever relaunching.
+    for name in ("SingletonLock", "SingletonCookie", "SingletonSocket"):
+        try:
+            os.unlink(os.path.join(CHROME_PROFILE, name))
+        except FileNotFoundError:
+            pass
     log("launching Chrome with remote debugging...")
     subprocess.Popen(
         [binary, f"--remote-debugging-port={DEBUG_PORT}",
