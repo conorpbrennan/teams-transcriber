@@ -19,13 +19,17 @@ Install as a background service with install_service.sh.
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
+import traceback
 from datetime import datetime
 
 import requests
 import websocket  # websocket-client
+
+IS_WINDOWS = sys.platform == "win32"
 
 CDP_HTTP = "http://localhost:9222"
 DEBUG_PORT = 9222
@@ -154,11 +158,17 @@ INJECT_JS = r"""
       const more = moreBtn();
       if (!more) { note('meeting "More" button not found'); return; }
       more.click(); await wait(900);                 // open the overflow menu
-      // The captions toggle lives in a "Language and speech" submenu (a
-      // haspopup=menu item with no data-tid) -- open it first.
-      const lang = clickables().find(el =>
-        /language and speech|captions and transcript/i.test(
-          (el.getAttribute('aria-label') || '') + ' ' + txt(el)));
+      // The captions toggle lives in a submenu (a haspopup=menu item with no
+      // data-tid) -- open it first. Its label varies by Teams build: "Language
+      // and speech", "Captions and transcript", or just "Captions" (Windows).
+      // Exclude the "...live captions" toggle so we open the submenu, not it.
+      const label = el =>
+        ((el.getAttribute('aria-label') || '') + ' ' + txt(el)).toLowerCase();
+      const lang = clickables().find(el => {
+        const l = label(el);
+        return /language and speech|captions and transcript/.test(l)
+          || (/\bcaptions?\b/.test(l) && !/live captions/.test(l));
+      });
       if (lang) { lang.click(); await wait(900); }
       const off = document.querySelector('[data-tid="closed-captions-button-off"]')
                 || match(/show live captions|turn on live captions/);
@@ -255,6 +265,17 @@ def chrome_alive():
 
 
 def chrome_binary():
+    if IS_WINDOWS:
+        # Standard per-machine and per-user install locations, then PATH.
+        candidates = [
+            os.path.expandvars(r"%ProgramFiles%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe"),
+        ]
+        for path in candidates:
+            if os.path.isfile(path):
+                return path
+        return shutil.which("chrome") or shutil.which("chrome.exe")
     for name in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser"):
         path = subprocess.run(["bash", "-lc", f"command -v {name}"],
                               capture_output=True, text=True).stdout.strip()
@@ -272,8 +293,12 @@ def display_env():
     current values and tracks the XAUTHORITY filename, whose suffix changes every
     login. Without these Chrome cannot reach the display and exits silently, so
     the debug port never opens and we loop relaunching forever.
+
+    Windows has no X display or systemd, so the process environment is used as-is.
     """
     env = dict(os.environ)
+    if IS_WINDOWS:
+        return env
     try:
         out = subprocess.run(["systemctl", "--user", "show-environment"],
                              capture_output=True, text=True, timeout=5).stdout
@@ -303,12 +328,19 @@ def launch_chrome():
         except FileNotFoundError:
             pass
     log("launching Chrome with remote debugging...")
+    # Detach Chrome from the daemon: setsid() on POSIX, a new process group with
+    # no inherited console on Windows, so it outlives a daemon restart. Both
+    # Windows flags are referenced only in the IS_WINDOWS branch, so they are
+    # never dereferenced on POSIX where the attributes do not exist.
+    detach = ({"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP
+               | subprocess.DETACHED_PROCESS}
+              if IS_WINDOWS else {"start_new_session": True})
     subprocess.Popen(
         [binary, f"--remote-debugging-port={DEBUG_PORT}",
          f"--user-data-dir={CHROME_PROFILE}", "--no-first-run",
          "--no-default-browser-check", TEAMS_URL],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
-        env=display_env(),
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        env=display_env(), **detach,
     )
     for _ in range(40):
         if chrome_alive():
@@ -520,11 +552,23 @@ def main():
         chosen.close()
         return
 
-    try:
-        daemon(args.interval, launch=not args.no_launch,
-               auto_captions=not args.no_auto_captions)
-    except KeyboardInterrupt:
-        log("daemon stopped.")
+    # Supervisor: the daemon loop should never exit, but an unhandled exception
+    # (a Chrome/CDP edge case, a transient OS error) must not kill the service.
+    # Catch it, log the traceback, and restart after a short backoff so recording
+    # resumes on its own. This makes the process self-healing on every platform,
+    # independent of whatever service manager launched it.
+    RESTART_BACKOFF = 5.0
+    while True:
+        try:
+            daemon(args.interval, launch=not args.no_launch,
+                   auto_captions=not args.no_auto_captions)
+        except KeyboardInterrupt:
+            log("daemon stopped.")
+            return
+        except Exception:
+            log("[fatal] daemon crashed; restarting in "
+                f"{RESTART_BACKOFF:.0f}s\n{traceback.format_exc().rstrip()}")
+            time.sleep(RESTART_BACKOFF)
 
 
 if __name__ == "__main__":
