@@ -1,7 +1,7 @@
 # Teams Transcriber
 
 A background **daemon** that automatically records Microsoft Teams meetings to
-text. It watches for a Teams meeting with **live captions** turned on, and the
+text. It watches for a Teams meeting, **turns live captions on for you**, and the
 moment captions appear it starts saving them to a per-meeting transcript file as:
 
 ```
@@ -17,10 +17,24 @@ lost as captions scroll away.
 
 1. The daemon keeps a debugging-enabled Chrome running (a dedicated profile, so
    your Teams login persists between sessions).
-2. It polls the Teams tab for live-caption elements.
-3. When captions appear → it opens a new file in `transcripts/` and records.
-4. When the meeting ends (captions gone, or the tab closes) → it finalizes that
+2. It polls **every** Teams tab for a meeting, so a call opened in a new tab (e.g.
+   from a calendar link) is picked up wherever it lands.
+3. When it detects a meeting it **auto-enables live captions** (drives the menu:
+   More → Language and speech → Show live captions) — no manual step needed.
+4. When captions appear → it opens a new file in `transcripts/` and records.
+5. When the meeting ends (captions gone, or the tab closes) → it finalizes that
    file and goes back to watching.
+
+## Auto-enable & on-screen status
+
+Captions are turned on automatically, and the daemon shows a brief banner at the
+top of the meeting so you get confirmation without watching the logs:
+
+- 🟢 **"Meeting detected — transcriber is watching"** when it sees the call.
+- 🔴 **"Recording captions to transcript"** once recording has started.
+
+Each banner clears itself after 5 seconds. To disable the auto-enable behaviour
+and turn captions on yourself, run with `--no-auto-captions`.
 
 ## Install (run once)
 
@@ -44,28 +58,31 @@ systemctl --user disable --now teams-transcriber  # uninstall from startup
 
 ## Using it
 
-Just take your Teams meetings in the daemon's Chrome window and **turn on live
-captions** (More → Language and speech → Turn on live captions). Recording is
-automatic. Transcripts land in `transcripts/transcript_<date>_<time>.txt`.
+Just take your Teams meetings in the daemon's Chrome window — that's it. Captions
+are enabled and recording starts automatically; watch for the on-screen banners
+to confirm. Transcripts land in `transcripts/transcript_<date>_<time>.txt`.
 
 ## Running manually (without the service)
 
 ```bash
-python3 transcriber.py                 # foreground daemon (auto-launches Chrome)
-python3 transcriber.py --no-launch     # attach only to an already-running debug Chrome
-python3 transcriber.py --discover      # dump caption-related DOM (troubleshooting)
+python3 transcriber.py                    # foreground daemon (auto-launches Chrome)
+python3 transcriber.py --no-launch        # attach only to an already-running debug Chrome
+python3 transcriber.py --no-auto-captions # don't auto-enable captions; turn them on yourself
+python3 transcriber.py --discover         # dump caption/control DOM (troubleshooting)
 ```
 
 ## Requirements
 
 - Google Chrome (or Chromium) — detected automatically
 - Python: `requests`, `websocket-client`
-- Live captions must be turned on in the meeting (the daemon reads them; it can't
-  enable them for you).
+- Live captions (the daemon turns them on automatically; pass
+  `--no-auto-captions` to enable them yourself instead).
 
 ## Troubleshooting
 
 If a meeting records nothing, run `python3 transcriber.py --discover` during the
-call. It prints the caption-related DOM elements; if Teams has changed its
-markup, update the `TEXT_SELECTORS` / `AUTHOR_SELECTORS` lists in
+call. It prints the caption-related DOM **and** the meeting toolbar buttons. If
+Teams has changed its markup, update the `TEXT_SELECTORS` / `AUTHOR_SELECTORS`
+lists (caption capture) or the auto-enable selectors in `INJECT_JS`
+(`closed-captions-button-off`, the "Language and speech" menu item) in
 `transcriber.py`.
