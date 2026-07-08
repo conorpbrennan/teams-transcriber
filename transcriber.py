@@ -95,6 +95,81 @@ INJECT_JS = r"""
   });
   window.__capPresent = () => captionEls().length > 0;
   window.__capReset = () => { window.__capLog.length = 0; live.clear(); };
+
+  // A brief on-screen banner the daemon fires at milestones (meeting seen,
+  // recording started) so you get visual confirmation without reading logs.
+  window.__capToast = (msg, color) => {
+    try {
+      let el = document.getElementById('__capToast');
+      if (!el) { el = document.createElement('div'); el.id = '__capToast';
+                 document.documentElement.appendChild(el); }
+      el.textContent = msg;
+      el.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);'
+        + 'z-index:2147483647;padding:12px 22px;border-radius:10px;'
+        + 'font:600 15px/1.3 system-ui,-apple-system,Segoe UI,sans-serif;color:#fff;'
+        + 'background:' + (color || '#0b7a34') + ';box-shadow:0 6px 24px rgba(0,0,0,.4);'
+        + 'pointer-events:none;';
+      clearTimeout(el.__t);
+      el.__t = setTimeout(() => { el.remove(); }, 5000);
+    } catch (e) {}
+  };
+
+  // --- auto-enable live captions -------------------------------------------
+  // Teams can't be told to start captions via an API, so we drive the meeting
+  // toolbar: click the overflow "More" button, then the "Show live captions"
+  // item (data-tid="closed-captions-button-off"). Verified against
+  // teams.live.com/v2 (Jul 2026); the data-tid is the stable hook.
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const clickables = () => [...document.querySelectorAll(
+    'button,[role=menuitem],[role=menuitemcheckbox],[role=button]')];
+  const match = re => clickables().find(el => re.test(
+    ((el.getAttribute('aria-label') || '') + ' ' + txt(el)).toLowerCase()));
+  // The overflow button is labelled exactly "More"; the hang-up "More options"
+  // and "More chat options" buttons must not match.
+  const moreBtn = () => clickables().find(el =>
+    (el.getAttribute('aria-label') || '').trim().toLowerCase() === 'more' ||
+    txt(el).toLowerCase() === 'more');
+  const captionsOn = () => captionEls().length > 0
+    || !!document.querySelector('[data-tid="captions-panel-dismiss-button"]')
+    || !!document.querySelector('[data-tid^="closed-captions-settings-menu-trigger"]')
+    || !!document.querySelector('[data-tid="closed-captions-button-on"]');
+  // In a call iff there is a Leave / hang-up control.
+  window.__capMeeting = () => !!match(/\b(leave|hang up)\b/);
+  window.__cap = { done: false, inCall: false, tries: 0, busy: false, last: 0, log: [] };
+  const note = m => {
+    window.__cap.log.push(m);
+    if (window.__cap.log.length > 20) window.__cap.log.shift();
+  };
+  async function enableCaptions() {
+    if (window.__autoCapOff) return;
+    const st = window.__cap, inCall = window.__capMeeting();
+    if (inCall && !st.inCall) { st.done = false; st.tries = 0; }  // new meeting
+    st.inCall = inCall;
+    if (!inCall || st.done) return;
+    if (captionsOn()) { st.done = true; note('captions already on'); return; }
+    const now = Date.now();
+    if (st.busy || now - st.last < 8000 || st.tries >= 8) return;  // bounded, throttled
+    st.busy = true; st.last = now; st.tries++;
+    try {
+      const more = moreBtn();
+      if (!more) { note('meeting "More" button not found'); return; }
+      more.click(); await wait(900);                 // open the overflow menu
+      // The captions toggle lives in a "Language and speech" submenu (a
+      // haspopup=menu item with no data-tid) -- open it first.
+      const lang = clickables().find(el =>
+        /language and speech|captions and transcript/i.test(
+          (el.getAttribute('aria-label') || '') + ' ' + txt(el)));
+      if (lang) { lang.click(); await wait(900); }
+      const off = document.querySelector('[data-tid="closed-captions-button-off"]')
+                || match(/show live captions|turn on live captions/);
+      if (off) { off.click(); st.done = true; note('turned live captions on'); }
+      else if (captionsOn()) { st.done = true; note('captions already on'); more.click(); }
+      else { note('caption toggle not found in menu'); more.click(); }
+    } catch (e) { note('error: ' + e.message); }
+    finally { st.busy = false; }
+  }
+  setInterval(enableCaptions, 3000);
+
   scan();
   window.__capInit = true;
   return 'init';
@@ -102,21 +177,31 @@ INJECT_JS = r"""
 """
 
 STATUS_JS = ("JSON.stringify({n:(window.__capLog||[]).length,"
-             "present:(typeof window.__capPresent==='function'?window.__capPresent():false)})")
+             "present:(typeof window.__capPresent==='function'?window.__capPresent():false),"
+             "meeting:(typeof window.__capMeeting==='function'?window.__capMeeting():false),"
+             "autolog:((window.__cap&&window.__cap.log)||[])})")
 LOG_JS = "JSON.stringify(window.__capLog || [])"
 
 DISCOVER_JS = r"""
 (() => {
-  const out = [];
+  const out = { captions: [], controls: [] };
   document.querySelectorAll('[data-tid],[aria-label],[class]').forEach(el => {
     const sig = [el.getAttribute('data-tid'), el.getAttribute('aria-label'),
                  el.className && el.className.toString()].join(' ');
     if (/caption/i.test(sig)) {
-      out.push({ tag: el.tagName, sig: sig.trim().slice(0, 120),
-                 text: (el.innerText || '').trim().slice(0, 60) });
+      out.captions.push({ tag: el.tagName, sig: sig.trim().slice(0, 120),
+                          text: (el.innerText || '').trim().slice(0, 60) });
     }
   });
-  return JSON.stringify(out.slice(0, 25));
+  // Toolbar/menu buttons, so we can tune the auto-enable selectors.
+  document.querySelectorAll('button,[role=menuitem],[role=button]').forEach(el => {
+    const label = (el.getAttribute('aria-label') || el.innerText || '').trim();
+    if (label) out.controls.push({ tid: el.getAttribute('data-tid') || '',
+                                   label: label.slice(0, 50) });
+  });
+  out.captions = out.captions.slice(0, 25);
+  out.controls = out.controls.slice(0, 60);
+  return JSON.stringify(out, null, 2);
 })()
 """
 
@@ -232,15 +317,24 @@ def launch_chrome():
     return False
 
 
-def find_teams_target():
+def list_teams_targets():
+    """Every open Teams *page* tab (chat, calendar, and any meeting tabs).
+
+    A meeting launched from a calendar link opens in a new tab, so we must watch
+    all of them and record from whichever actually shows captions -- not just the
+    first Teams tab that happened to exist when the daemon attached.
+    """
     try:
         targets = requests.get(f"{CDP_HTTP}/json", timeout=5).json()
     except requests.RequestException:
-        return None
-    for t in targets:
-        if t.get("type") == "page" and any(h in t.get("url", "") for h in TEAMS_HINTS):
-            return t.get("webSocketDebuggerUrl")
-    return None
+        return []
+    return [t for t in targets
+            if t.get("type") == "page" and any(h in t.get("url", "") for h in TEAMS_HINTS)]
+
+
+def find_teams_target():
+    targets = list_teams_targets()
+    return targets[0].get("webSocketDebuggerUrl") if targets else None
 
 
 class Transcript:
@@ -271,67 +365,123 @@ def new_transcript_path():
     return os.path.join(out_dir, f"transcript_{datetime.now():%Y-%m-%d_%H%M%S}.txt")
 
 
-def daemon(interval, launch):
-    log(f"transcriber daemon started (poll {interval}s). Watching for Teams captions.")
-    cdp = None
+def daemon(interval, launch, auto_captions=True):
+    log(f"transcriber daemon started (poll {interval}s). Watching all Teams tabs"
+        + ("." if auto_captions else "; auto-captions disabled."))
+    conns = {}          # target id -> CDP connection
+    autolog_seen = {}   # target id -> auto-caption log lines already printed
+    meeting_ids = set() # tabs currently in a meeting (for the "detected" banner)
     recording = False
     transcript = None
+    rec_id = None       # target id we are recording from
     last_active = 0.0
+
+    def toast(tid, msg, color):
+        c = conns.get(tid)
+        if not c:
+            return
+        try:
+            c.evaluate(f"window.__capToast && window.__capToast({json.dumps(msg)},"
+                       f"{json.dumps(color)})")
+        except (websocket.WebSocketException, RuntimeError, OSError):
+            pass
+
+    def drop(tid):
+        c = conns.pop(tid, None)
+        if c:
+            c.close()
+        autolog_seen.pop(tid, None)
+        meeting_ids.discard(tid)
+
+    def stop_recording(reason):
+        nonlocal recording, transcript, rec_id
+        if transcript:
+            log(f"{reason}: saved {transcript.out_path}")
+        recording, transcript, rec_id = False, None, None
 
     while True:
         try:
             if not chrome_alive():
-                if recording and transcript:
-                    log(f"Chrome closed; finalized {transcript.out_path}")
-                recording, transcript, cdp = False, None, None
+                if recording:
+                    stop_recording("Chrome closed")
+                for tid in list(conns):
+                    drop(tid)
                 if launch:
                     launch_chrome()
                 else:
                     time.sleep(3)
-                    continue
+                continue
 
-            if cdp is None:
-                url = find_teams_target()
-                if not url:
-                    time.sleep(2)
-                    continue
-                cdp = CDP(url)
-                cdp.evaluate(INJECT_JS)
-                log("attached to Teams tab.")
+            targets = {t["id"]: t for t in list_teams_targets()}
+            for tid in list(conns):          # forget tabs that were closed
+                if tid not in targets:
+                    if tid == rec_id:
+                        stop_recording("recording tab closed")
+                    drop(tid)
 
-            cdp.evaluate(INJECT_JS)  # idempotent; re-arms after navigation
-            status = json.loads(cdp.evaluate(STATUS_JS))
-            present = status.get("present", False)
+            # Inject into / poll every Teams tab; collect which ones show captions.
+            present_ids = []
+            for tid, t in targets.items():
+                try:
+                    cdp = conns.get(tid)
+                    if cdp is None:
+                        cdp = CDP(t["webSocketDebuggerUrl"])
+                        conns[tid] = cdp
+                        if not auto_captions:
+                            cdp.evaluate("window.__autoCapOff = true")
+                        log(f"attached to Teams tab: {t.get('url', '')[:70]}")
+                    cdp.evaluate(INJECT_JS)   # idempotent; re-arms after navigation
+                    status = json.loads(cdp.evaluate(STATUS_JS))
+                except (websocket.WebSocketException, RuntimeError, OSError,
+                        json.JSONDecodeError):
+                    if tid == rec_id:
+                        stop_recording("recording tab lost")
+                    drop(tid)
+                    continue
+                autolog = status.get("autolog", [])
+                for line in autolog[autolog_seen.get(tid, 0):]:
+                    log(f"[auto-captions] {line}")
+                autolog_seen[tid] = len(autolog)
+                if status.get("meeting") and tid not in meeting_ids:
+                    meeting_ids.add(tid)
+                    log("meeting detected on a Teams tab")
+                    toast(tid, "✓ Meeting detected — transcriber is watching",
+                          "#0b7a34")
+                elif not status.get("meeting"):
+                    meeting_ids.discard(tid)
+                if status.get("present"):
+                    present_ids.append(tid)
+
             now = time.monotonic()
 
-            if not recording and present:
+            if not recording and present_ids:
+                rec_id = present_ids[0]
                 path = new_transcript_path()
-                cdp.evaluate("window.__capReset && window.__capReset()")
+                conns[rec_id].evaluate("window.__capReset && window.__capReset()")
                 transcript = Transcript(path)
                 recording, last_active = True, now
                 log(f"captions detected -> recording to {path}")
+                toast(rec_id, "● Recording captions to transcript", "#b00020")
 
-            if recording:
-                entries = json.loads(cdp.evaluate(LOG_JS))
-                before = transcript.finalized
-                transcript.ingest(entries)
-                if present or transcript.finalized > before:
-                    last_active = now
-                if not present and now - last_active > END_GRACE:
-                    transcript.ingest(entries, flush_last=True)
-                    log(f"meeting ended -> saved {transcript.out_path}")
-                    recording, transcript = False, None
+            if recording and rec_id in conns:
+                try:
+                    entries = json.loads(conns[rec_id].evaluate(LOG_JS))
+                except (websocket.WebSocketException, RuntimeError, OSError,
+                        json.JSONDecodeError):
+                    stop_recording("recording tab lost")
+                    entries = None
+                if entries is not None:
+                    present = rec_id in present_ids
+                    before = transcript.finalized
+                    transcript.ingest(entries)
+                    if present or transcript.finalized > before:
+                        last_active = now
+                    if not present and now - last_active > END_GRACE:
+                        transcript.ingest(entries, flush_last=True)
+                        stop_recording("meeting ended")
 
-        except (websocket.WebSocketException, RuntimeError, OSError,
-                json.JSONDecodeError) as e:
-            log(f"[info] tab dropped ({type(e).__name__}); will reattach")
-            if cdp:
-                cdp.close()
-            cdp = None
-            if recording and transcript:
-                # Page is gone; the meeting is effectively over.
-                log(f"finalized {transcript.out_path}")
-                recording, transcript = False, None
+        except requests.RequestException:
+            pass  # transient Chrome hiccup; retry next poll
 
         time.sleep(interval)
 
@@ -342,23 +492,37 @@ def main():
                     help="seconds between DOM polls (default 2)")
     ap.add_argument("--no-launch", action="store_true",
                     help="do not auto-launch Chrome; only attach if it is already running")
+    ap.add_argument("--no-auto-captions", action="store_true",
+                    help="do not try to turn live captions on automatically")
     ap.add_argument("--discover", action="store_true",
-                    help="print caption-related DOM elements once and exit")
+                    help="print caption/control DOM from the active meeting tab and exit")
     args = ap.parse_args()
 
     if args.discover:
-        url = find_teams_target()
-        if not url:
+        targets = list_teams_targets()
+        if not targets:
             print("No Teams tab found.", file=sys.stderr)
             sys.exit(1)
-        cdp = CDP(url)
-        cdp.evaluate(INJECT_JS)
-        print(cdp.evaluate(DISCOVER_JS))
-        cdp.close()
+        # Prefer a tab that is in a meeting / already showing captions.
+        chosen = None
+        for t in targets:
+            cdp = CDP(t["webSocketDebuggerUrl"])
+            cdp.evaluate(INJECT_JS)
+            status = json.loads(cdp.evaluate(STATUS_JS))
+            if status.get("present") or status.get("meeting"):
+                chosen = cdp
+                break
+            cdp.close()
+        if chosen is None:
+            chosen = CDP(targets[0]["webSocketDebuggerUrl"])
+            chosen.evaluate(INJECT_JS)
+        print(chosen.evaluate(DISCOVER_JS))
+        chosen.close()
         return
 
     try:
-        daemon(args.interval, launch=not args.no_launch)
+        daemon(args.interval, launch=not args.no_launch,
+               auto_captions=not args.no_auto_captions)
     except KeyboardInterrupt:
         log("daemon stopped.")
 
