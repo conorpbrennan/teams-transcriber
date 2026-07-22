@@ -1,0 +1,616 @@
+[11:03:59] Haltiner, Chris: We can't hear you just yet.
+[11:04:04] Sundararajan, Pranesh: Hey, we got we can't quite hear you. Yeah.
+[11:04:14] Haltiner, Chris: We still can't hear you.
+[11:04:14] Haltiner, Chris: Yep.
+[11:04:16] Haltiner, Chris: Yep.
+[11:04:16] Conor (Unverified): Perfect. Can you guys hear me?
+[11:04:18] Haltiner, Chris: Now we can hear you.
+[11:04:18] Sundararajan, Pranesh: Yeah.
+[11:04:20] Conor (Unverified): Hey pranesh, how you doing?
+[11:04:20] Sundararajan, Pranesh: Hey Cortana, good.
+[11:04:22] Sundararajan, Pranesh: How are you doing?
+[11:04:22] Conor (Unverified): I'm sorry, go.
+[11:04:24] Sundararajan, Pranesh: Yeah, go ahead.
+[11:04:28] Sundararajan, Pranesh: I was just wondering like it looks like you're still, you're still in an office or? Yeah, I thought.
+[11:04:32] Conor (Unverified): I am still in an office. Today is my last day in the office here so.
+[11:04:40] Conor (Unverified): It's a little I wasn't sure how it was going to be, to be honest it.
+[11:04:42] Conor (Unverified): Yeah, I've been here like 15 years.
+[11:04:42] Haltiner, Chris: That's a long time.
+[11:04:44] Conor (Unverified): It's a long time, yeah.
+[11:04:46] Sundararajan, Pranesh: I can totally see that.
+[11:04:46] Conor (Unverified): It is what it is anyway.
+[11:04:50] Conor (Unverified): Very good to see you again in in person.
+[11:04:52] Conor (Unverified): Thanks for taking the time to join.
+[11:04:52] Sundararajan, Pranesh: Of course.
+[11:05:00] Sundararajan, Pranesh: Yeah. And we're we're looking forward to you starting, you know, next month I think and or September. Yeah, yeah.
+[11:05:00] Conor (Unverified): Yeah, September 8th. Yeah.
+[11:05:03] Conor (Unverified): So it's it's, yeah, not far.
+[11:05:05] Conor (Unverified): Not far.
+[11:05:09] Conor (Unverified): So it's. Yeah, no, I'm very much looking forward as well. So I met.
+[11:05:15] Conor (Unverified): The with Alex and some of the team last night.
+[11:05:21] Conor (Unverified): And some of the risk managers. So that was good kind of get us a get a sense for some of the people.
+[11:05:27] Conor (Unverified): And then, you know, I've been sort of working with kind of Chris like he's been.
+[11:05:31] Conor (Unverified): Getting me kind of up to speed over the last, I don't know, is it month now? Maybe crystal.
+[11:05:33] Haltiner, Chris: Something like that, yeah.
+[11:05:37] Conor (Unverified): Yeah, yeah, feels longer.
+[11:05:39] Conor (Unverified): And there's a couple of different things.
+[11:05:41] Conor (Unverified): You know that that we've covered.
+[11:05:43] Conor (Unverified): But one of them sort of.
+[11:05:53] Conor (Unverified): Just more recently was on the topic of caching and I think maybe you and Chris had also discussed that as well.
+[11:05:57] Conor (Unverified): So it's definitely something I wanted to get your sort of thoughts and sort of input on.
+[11:06:02] Conor (Unverified): But you probably haven't had a chance.
+[11:06:08] Conor (Unverified): I mean, I sent you kind of, you know, I was trying to keep track of what we discussed and just the kind of most most recent version.
+[11:06:16] Conor (Unverified): But maybe I just kind of walk through and just just to kind of get your sort of.
+[11:06:18] Conor (Unverified): Instinctual reaction. If you like, yeah.
+[11:06:20] Sundararajan, Pranesh: Sure. Yeah, yeah.
+[11:06:26] Sundararajan, Pranesh: To, to be honest, I I took a very high level look at the doc that you sent across, but I haven't like fully read it.
+[11:06:32] Sundararajan, Pranesh: There was an. Yeah, yeah, yeah. OK.
+[11:06:34] Conor (Unverified): I'm that wasn't expected at all. As I said at your leisure. But just just really to get more of a yeah, so.
+[11:06:50] Conor (Unverified): It's also the client based caching I guess, and the sort of the assumption as of now, and this obviously may change is that the client was local as in not on AWS.
+[11:06:54] Conor (Unverified): So there were, you know, there was some sort of like query time.
+[11:07:01] Conor (Unverified): And also some sort of like data transfer as well right?
+[11:07:01] Conor (Unverified): And so I did.
+[11:07:17] Conor (Unverified): I worked with Chris just to get some, you know, approximate sizings of the kind of data sets that you're looking at and then scaling that out by, you know, number of models that you have sort of, you know, both regional and global, just to try and get Comm.
+[11:07:19] Conor (Unverified): Sort of. Data set sizes and then.
+[11:07:21] Conor (Unverified): We.
+[11:07:25] Conor (Unverified): The current schemas are sort of normalized schema I guess.
+[11:07:29] Conor (Unverified): But it's like 1 fact per row.
+[11:07:35] Conor (Unverified): And you know that like the two query patterns that we had were sort of time series based and cross-sectional.
+[11:07:39] Conor (Unverified): And that was a bit slow for those.
+[11:07:49] Conor (Unverified): So we sort of experimented with creating like a materialized kind of view of a time series based.
+[11:07:56] Conor (Unverified): So kind of asset index based and then kind of like update based both with wide tables in in terms of columns.
+[11:07:56] Conor (Unverified): And.
+[11:08:00] Conor (Unverified): Even with that?
+[11:08:10] Conor (Unverified): Query in Connor, kind of from AWS on on to the clients was still a lot slower than if it was cashed locally.
+[11:08:22] Conor (Unverified): So the sort of the idea that sort of I think originated from Chris, was to kind of have this idea of a sort of pre warming set, which you could specify, which is sort of a combination of and this is per model, but of dates.
+[11:08:34] Conor (Unverified): And assets. So you could kind of specify that and the idea is that that would kind of get warmed, you know, before you came to use it.
+[11:08:40] Conor (Unverified): You know, so it could be like at a certain time or whatever, so that that was sort of cashed locally in in your instance.
+[11:08:46] Conor (Unverified): And available for use.
+[11:08:54] Conor (Unverified): If there were, and this is just something that we kind of worked on kind of over the last day or two, if if.
+[11:09:07] Conor (Unverified): On a day maybe there was sort of some new positions or like new assets that you wanted to add in then it could also support a sort of an extending of that?
+[11:09:17] Conor (Unverified): And that could be either across dates or it could be across assets and if it's both, if it was both, it would just do the sort of like the kind of you know.
+[11:09:17] Conor (Unverified): The multiplicative.
+[11:09:21] Conor (Unverified): Sort of version.
+[11:09:27] Conor (Unverified): So, but it would only, you know, be valid for probably a day.
+[11:09:39] Conor (Unverified): Again, that can be kind of specified, meaning that if you were trying to query it and it had been cached for more than a day, then that would be invalidated and it would force it to re query.
+[11:09:39] Sundararajan, Pranesh: Got it.
+[11:09:43] Sundararajan, Pranesh: Yeah, I've yes discussed some of this with Chris yesterday.
+[11:09:47] Sundararajan, Pranesh: So it might be a little bit of a rapid for for, for, for Chris, but.
+[11:09:55] Sundararajan, Pranesh: Mike concern, I mean First off, I think we absolutely need some kind of caching layer because just doing the queries.
+[11:10:03] Sundararajan, Pranesh: In all of our data is in Snowflake and we access it through multiple mediums, right?
+[11:10:07] Sundararajan, Pranesh: So we either from our laptop, you know from our code or most of our most of most of the developers.
+[11:10:12] Sundararajan, Pranesh: And even pass they're on this remote environments, right?
+[11:10:22] Sundararajan, Pranesh: So most of us access it from code or remote environments, but we also allow you know, users to access it from tops, that it's also something that some folks were not yet on the remote environment are doing.
+[11:10:28] Sundararajan, Pranesh: Long term, we probably want to pick one in this and only support that which is a core environment.
+[11:10:30] Sundararajan, Pranesh: But for now, there's like both allowed.
+[11:10:32] Sundararajan, Pranesh: The other.
+[11:10:34] Sundararajan, Pranesh: The second thing is we did some profiling of all of this.
+[11:10:36] Sundararajan, Pranesh: A few months ago.
+[11:10:44] Sundararajan, Pranesh: And we can do things on the back end to speed up the actual query execution time so we can parameterize the queries.
+[11:10:44] Sundararajan, Pranesh: We can like do this.
+[11:10:56] Sundararajan, Pranesh: Can do that to to speed up the actual query time, but a large part of the bottleneck is actually transferring the data literally, like physically transferring the data.
+[11:11:08] Sundararajan, Pranesh: From the back end that a snowflake to either the core environment or our laptops, and as you can imagine, it's a lot faster on our core environments because it's closer to the actual data source.
+[11:11:14] Sundararajan, Pranesh: They're both on the cloud, but even then we do see that that becomes like a huge a huge bottleneck.
+[11:11:29] Sundararajan, Pranesh: And the second point is that we don't really have a concept of a fast local file system anyway, like we use S3 for our storage.
+[11:11:31] Sundararajan, Pranesh: You know there's in, in some ways you know for.
+[11:11:41] Sundararajan, Pranesh: In in the past, you know when you know where Chris and I were before we, we'd have like a local really fast super fast like file system locally and we'd have something on the cloud and there would just always be In Sync.
+[11:11:41] Sundararajan, Pranesh: Right there.
+[11:11:53] Sundararajan, Pranesh: There would be like the things that would sync it back and forth. And so if if I'm working locally, I go to my local file system, if I run a job on a local as in on Prem I I want to say like on Prem or what some.
+[11:11:59] Sundararajan, Pranesh: File system that is very close to the machine that I'm working on, right?
+[11:12:01] Sundararajan, Pranesh: It could be a shared file system.
+[11:12:07] Sundararajan, Pranesh: It could be my own, you know, drive. But whatever the the file system itself is very close so that.
+[11:12:11] Sundararajan, Pranesh: Data transfer speeds.
+[11:12:13] Sundararajan, Pranesh: Are not an issue like the issue that we see here.
+[11:12:22] Sundararajan, Pranesh: And there are some simple tests that that I've done which is like forget any like back end or forget any like database itself.
+[11:12:24] Sundararajan, Pranesh: Let's say I have a bunch of files on S3.
+[11:12:24] Conor (Unverified): Mm-hmm.
+[11:12:28] Sundararajan, Pranesh: How long does it take for me to just load those files?
+[11:12:34] Sundararajan, Pranesh: Do APD dot read parquet of a file name where that file name is on an S3 bucket.
+[11:12:46] Sundararajan, Pranesh: And so that has been like where I have sort of hit a roadblock as to like how do we, you know, make that faster. And so having some local cache.
+[11:12:50] Conor (Unverified): You're talking about local mayor or also for your coder environment.
+[11:12:58] Sundararajan, Pranesh: For for coda I mean coda makes it faster, but even then it is not as fast as having it in my slash temp slash slash data, right?
+[11:13:00] Conor (Unverified): Yeah. Well, I'm just curious.
+[11:13:04] Conor (Unverified): Like for what? What I mean had, because it should be like very, I mean like.
+[11:13:10] Conor (Unverified): I guess first of all, what what size are we talking approximately and then?
+[11:13:13] Sundararajan, Pranesh: Yeah. So yeah, so so for example.
+[11:13:19] Sundararajan, Pranesh: For yeah, for for example.
+[11:13:29] Sundararajan, Pranesh: I have, you know, Security Master records that are about a million rows per day, stored as like a feather file.
+[11:13:33] Sundararajan, Pranesh: Look that on 1/4 environment takes about 3 seconds, just like PD dot.
+[11:13:35] Conor (Unverified): Yeah, but OK. Feather is super big though, right?
+[11:13:35] Conor (Unverified): Like it's.
+[11:13:39] Conor (Unverified): I mean, it's massive if you compare the size of that to parquet.
+[11:13:43] Sundararajan, Pranesh: Really. I thought Feather was smaller than Parque, I thought.
+[11:13:43] Conor (Unverified): Like. Well, no, no, no, no, no, no.
+[11:13:47] Conor (Unverified): Feather is like is the in memory binary arrow representation.
+[11:13:51] Conor (Unverified): It's it's much, much, much larger.
+[11:13:51] Sundararajan, Pranesh: Interesting.
+[11:14:01] Conor (Unverified): It it can be like up to 10X like parquet will definitely size wise give you the smallest no question.
+[11:14:03] Sundararajan, Pranesh: Interesting.
+[11:14:10] Conor (Unverified): Feather is like is like I mean for feather to work, you've got to have really good network access.
+[11:14:18] Conor (Unverified): Because it's it's basically, it's the in memory like arrow representation you're taking and putting that you know it's like a memp.
+[11:14:20] Sundararajan, Pranesh: I see.
+[11:14:22] Sundararajan, Pranesh: Yeah, I interesting.
+[11:14:28] Sundararajan, Pranesh: I don't think there's from from my like testing and the I mean the actual size on disk was.
+[11:14:30] Sundararajan, Pranesh: Roughly equal, I think.
+[11:14:34] Sundararajan, Pranesh: I didn't think it was that much bigger.
+[11:14:38] Sundararajan, Pranesh: But but.
+[11:14:38] Conor (Unverified): What's the cardinality like of your columns like?
+[11:14:40] Conor (Unverified): Is there like a lot like?
+[11:14:46] Sundararajan, Pranesh: Yeah. So it's like think of it as like a million rows times.
+[11:14:48] Sundararajan, Pranesh: Above 40 columns.
+[11:14:54] Conor (Unverified): No, but what's the repetition in those like?
+[11:14:56] Sundararajan, Pranesh: There is.
+[11:14:58] Sundararajan, Pranesh: See.
+[11:14:58] Conor (Unverified): Are they all numeric?
+[11:15:03] Sundararajan, Pranesh: No, they're all they're all they're all like, identify.
+[11:15:05] Sundararajan, Pranesh: They're all. Yeah, they're all identifiers.
+[11:15:05] Conor (Unverified): OK so.
+[11:15:13] Sundararajan, Pranesh: I just some of them are unique, some of some columns will be unique, some things like currency will. Of course there'll be repetition, things like string.
+[11:15:13] Conor (Unverified): Yeah. So we've got repetition then it should park able definitely get smaller.
+[11:15:17] Sundararajan, Pranesh: I see, but this will this is.
+[11:15:21] Sundararajan, Pranesh: Not that much repetition because you've got all unique identifiers.
+[11:15:23] Sundararajan, Pranesh: So it's like saying it's a Security Master data, right?
+[11:15:23] Conor (Unverified): OK.
+[11:15:31] Sundararajan, Pranesh: So and so like just one of the tests that I've done. I mean it, it really doesn't matter.
+[11:15:37] Sundararajan, Pranesh: What I've noticed is that the format itself doesn't have that much of a difference.
+[11:15:47] Sundararajan, Pranesh: Like loading something like that takes about 3 seconds like a million rows, 40 columns. That's.
+[11:15:50] Conor (Unverified): I mean, that's not, I mean that.
+[11:15:54] Conor (Unverified): Like what is your sort of benchmark that you're trying to get like like get to?
+[11:15:58] Sundararajan, Pranesh: So so that if we were to do it.
+[11:16:10] Sundararajan, Pranesh: You know on where if I store it locally and where to read that it would be sub second it would be like right fraction of a second and that's the type of thing that when we try to scale that it starts becoming you know when we say things.
+[11:16:18] Sundararajan, Pranesh: Are slow. That sort of effect starts magnifying.
+[11:16:26] Sundararajan, Pranesh: But if I'm trying to calculate factor volatility over the last year, a time series of factor volatility from a portfolio where I've got like both.
+[11:16:36] Sundararajan, Pranesh: In both dimensions I've got like 10,000 securities over a year, so I have to load all of the data, not not all of it at once.
+[11:16:41] Sundararajan, Pranesh: Of course I load it in chunks, do some calculation and put that stitch that time series together.
+[11:16:43] Sundararajan, Pranesh: Or we can parallelize it.
+[11:16:49] Sundararajan, Pranesh: We can do all of that computer, but the point is that is the total sort of volume of data that we're trying to load.
+[11:16:51] Sundararajan, Pranesh: That's where we're running into.
+[11:16:55] Sundararajan, Pranesh: Like when I said things are slow like.
+[11:16:55] Conor (Unverified): I mean generally like S3 is pretty.
+[11:16:59] Conor (Unverified): I mean, that's one thing is really good at is is parallelizing the reads.
+[11:17:17] Conor (Unverified): So if you're able to sort of, you know, on on your side that's querying that if if you're able to parallelize that, you should be able to get like whatever the, you know, if it's three seconds like that, that that shouldn't increase.
+[11:17:17] Sundararajan, Pranesh: Interesting. OK.
+[11:17:25] Conor (Unverified): I mean 3 seconds doesn't sound, you know, sort of. I thought you were going to be heading towards like a minute or something. Like, I mean if.
+[11:17:31] Sundararajan, Pranesh: No, no. It's like 3 seconds on quota and it's like 10 seconds if I do it on my laptop.
+[11:17:44] Sundararajan, Pranesh: And if if the file itself were on my local drive, it's essentially a fraction of a second, so that's where we're that. That's where we're going for. That's the the.
+[11:17:48] Conor (Unverified): I see and.
+[11:17:50] Conor (Unverified): Is.
+[11:17:54] Conor (Unverified): How repeated is this?
+[11:18:06] Sundararajan, Pranesh: It is a lot of these are very repeated and that that's one of the points that our users bring up, which is let's say, I'm trying to do, you know, a portfolio analytics for.
+[11:18:10] Sundararajan, Pranesh: For different models, some slightly different assumptions.
+[11:18:20] Sundararajan, Pranesh: Every run, every iteration is is using that 3 seconds is is like needs to spend that 3 seconds to like load it and get that data and and and so the question yeah.
+[11:18:30] Conor (Unverified): No, but I mean like if there's one data set that like you query once and say like you were to cache it and you're kind of like SSD locally, are you then going to be rereading that again at some point in the future or not or is it?
+[11:18:33] Conor (Unverified): Always disparate.
+[11:18:41] Sundararajan, Pranesh: It's it always goes to S3, it always goes through so there is no concept of putting it on my local SSD.
+[11:18:47] Conor (Unverified): If you're in the coda, but like if you're pulling it like locally on onto a laptop or whatever.
+[11:18:53] Sundararajan, Pranesh: Yeah. I mean, even then we don't have a concept of, you know, storing it on our SSD.
+[11:18:57] Sundararajan, Pranesh: You know, we work on laptops.
+[11:19:07] Sundararajan, Pranesh: Yes, some folks have bigger like PCs, but we're trying to avoid running things on our laptops in the first place.
+[11:19:13] Sundararajan, Pranesh: And so any solution that we want, I think we wanted to 1st work on quota, right?
+[11:19:13] Sundararajan, Pranesh: And then and then.
+[11:19:17] Sundararajan, Pranesh: Think about how it would work on our laptop as well.
+[11:19:19] Conor (Unverified): OK. I mean if sorry.
+[11:19:21] Sundararajan, Pranesh: Yeah, yeah, yeah.
+[11:19:32] Haltiner, Chris: This is now 3 seconds for the Security Master, but in a typical workflow you would have a Security Master. You would load factory terms, you would load factor loadings.
+[11:19:44] Haltiner, Chris: So. So it's kind of three seconds standalone is not bad, but it very quickly compounds and each of those things is going to take some time and that's before the computations even start. Just for some context, I think this is one of the.
+[11:19:48] Haltiner, Chris: Reasons that people complain about it even though 3 seconds in standalone.
+[11:19:52] Haltiner, Chris: Don't seem too bad, but in a in kind of in in.
+[11:19:58] Haltiner, Chris: In practice, it's not just those 3 seconds, but it's similar 3 seconds in a number of different places, and that adds up.
+[11:20:00] Conor (Unverified): Can I ask one thing then?
+[11:20:08] Conor (Unverified): Because this is something that Chris was able to sort of help specify to me and it ended up being very helpful.
+[11:20:25] Conor (Unverified): So do you think like just like to generate for me to be able to generate synthetic data, but that mimics the like the schema and the shape right of of what it is that you're trying to load? And then also a sort of definition of like you know?
+[11:20:27] Conor (Unverified): Like the recurrence of that.
+[11:20:33] Conor (Unverified): Because then if I can get something like that then I can have a sort of like look at how you could.
+[11:20:35] Sundararajan, Pranesh: Yeah, it's. I'm. I'm trying to think about.
+[11:20:43] Sundararajan, Pranesh: How to create that synthetic data without? Yeah the I.
+[11:20:49] Conor (Unverified): All I'd need from you is a kind of spec like, you know, like, just like what is the like the schema of the tables look like what's the size of them?
+[11:20:53] Conor (Unverified): What's the approximate kind of cardinality for each column?
+[11:20:57] Sundararajan, Pranesh: Yeah, let me try to let let me try to put something together and I'll send it across.
+[11:21:01] Sundararajan, Pranesh: Where? What we you know the schemas I mean, of course it would be a lot easier if you were here. And we can just, like give you the.
+[11:21:04] Conor (Unverified): Mm-h.
+[11:21:08] Sundararajan, Pranesh: You know you can just access the the data itself.
+[11:21:10] Sundararajan, Pranesh: But.
+[11:21:10] Sundararajan, Pranesh: Yeah.
+[11:21:12] Conor (Unverified): Have you tried just just out of interest in Pranish?
+[11:21:14] Conor (Unverified): Have you tried parallelizing?
+[11:21:20] Sundararajan, Pranesh: Yes, we that's one of the things that I'm working together.
+[11:21:24] Sundararajan, Pranesh: Parallizing absolutely helps, but right now we are only parallelizing on one box.
+[11:21:32] Sundararajan, Pranesh: So which is even our biggest boxes have like 64 CPUs and 128 gigs RAM, right?
+[11:21:38] Sundararajan, Pranesh: One of the things that I'm working on with our infra team is to be able to like scale this on task so I can run it on like 200 or you know 300.
+[11:21:42] Sundararajan, Pranesh: Work hours across multiple CPUs, multiple box and I want to really benchmark it there.
+[11:21:44] Conor (Unverified): Mm-hmm.
+[11:21:55] Sundararajan, Pranesh: But there of course with when we try to parallelize, there's always overhead in creating those parallel workers, which has nothing to do with the file reading or any of the of the.
+[11:22:03] Sundararajan, Pranesh: It's out and so we have to structure our calculations such that the overhead of creating those workers.
+[11:22:07] Sundararajan, Pranesh: Is very small compared to the meat of the calculation that is doing right.
+[11:22:09] Sundararajan, Pranesh: So and there's this.
+[11:22:13] Sundararajan, Pranesh: There's there's this thinking that the cloud is infinite and instant, but it's not right.
+[11:22:17] Sundararajan, Pranesh: So if I even if I want like.
+[11:22:23] Sundararajan, Pranesh: To spin up, let's say I want to calculate square root of X over like 10,000.
+[11:22:27] Sundararajan, Pranesh: 10,000 random integers, right?
+[11:22:29] Sundararajan, Pranesh: I can do it in the cloud or I can do it locally in parallel.
+[11:22:33] Sundararajan, Pranesh: There, there's gonna be some threshold at which.
+[11:22:41] Sundararajan, Pranesh: Going exactly the spin up going, doing it in on the cloud is gonna be faster, but so we have to structure our jobs such that.
+[11:22:46] Sundararajan, Pranesh: The trade off is is in our favor where the.
+[11:22:50] Conor (Unverified): So your workers are always being spun up when the request comes in.
+[11:22:52] Conor (Unverified): They're they're not sort of lazily up.
+[11:22:52] Sundararajan, Pranesh: Yes.
+[11:22:54] Conor (Unverified): I mean 'cause, that's one way of.
+[11:22:56] Conor (Unverified): Trying to mitigate against that.
+[11:23:04] Sundararajan, Pranesh: Yes, having a lazily up then. Then we have to think about the costs of having it always on.
+[11:23:16] Sundararajan, Pranesh: There's there's things to be but, but even even that building out that compute infra is something very much in flight and I'm closely involved with our infrastructure team to be able to parallelize that. The the only sort of production way of parallelizing right now is parallelizing on one.
+[11:23:18] Sundararajan, Pranesh: Box, right?
+[11:23:20] Sundararajan, Pranesh: And and to the extent that you can.
+[11:23:26] Sundararajan, Pranesh: Do do that generally with these processes, you need at least like 10 to 20 gigs of RAM.
+[11:23:28] Sundararajan, Pranesh: So even if you have.
+[11:23:30] Conor (Unverified): And what's the limitation with the 60 code?
+[11:23:37] Conor (Unverified): Is that just the certain like instance types that the code supports or?
+[11:23:39] Sundararajan, Pranesh: Oh, you mean the.
+[11:23:43] Sundararajan, Pranesh: The number of parallel processes. Yeah. So the. So the limit is.
+[11:23:55] Sundararajan, Pranesh: So the limit is mostly we're limited by the RAM. Actually most for for the most case, because these factor model calculations they require like 10 to 20 gigs per per process.
+[11:23:59] Sundararajan, Pranesh: And even if you just look at the size on disk.
+[11:24:07] Sundararajan, Pranesh: So my rule of thumb is the RAM is generally like two to four X the size on disk.
+[11:24:09] Sundararajan, Pranesh: Right off of the data that you have.
+[11:24:15] Sundararajan, Pranesh: And we end up having. So putting that you generally need about 10 to 20 gigs per.
+[11:24:26] Sundararajan, Pranesh: Per task or per process and with a box of like 128 gigs you can get like 12.
+[11:24:28] Conor (Unverified): Are you pivoting the data like when you bring it in, or is it already?
+[11:24:36] Sundararajan, Pranesh: Yeah, there's so we once we query the data, there's a bunch of like transformations that we do and all of the calculations are actually vectorized Numpy operations.
+[11:24:46] Sundararajan, Pranesh: So it get it as data frames, then convert these to Numpy matrices, and then there's a whole bunch of matrix algebra that happens to be able to, say, calculate a factor volatility.
+[11:24:48] Sundararajan, Pranesh: So we take the.
+[11:24:52] Sundararajan, Pranesh: A factor the the the positions exposure.
+[11:24:56] Conor (Unverified): What I mean there is when you query it though is. Is it like in a normalized form?
+[11:25:02] Conor (Unverified): So that you have to pivot it into wide column or is it already coming to you in?
+[11:25:11] Sundararajan, Pranesh: Some of them, some of them are already in the white format the way. So my rule of thumb here is that especially with data frames.
+[11:25:17] Sundararajan, Pranesh: It to keep the number of rows and columns roughly of the same order of magnitude, right?
+[11:25:23] Sundararajan, Pranesh: Because data frames do really badly. If you have like if the number of the rows and columns are asymmetric, that is, you have.
+[11:25:31] Sundararajan, Pranesh: Much I I see much better performance with like 1000 by thousand data frame than 1,000,000 by one data frame.
+[11:25:33] Conor (Unverified): I see.
+[11:25:35] Conor (Unverified): I see.
+[11:25:43] Conor (Unverified): No, I'm. I'm just asking because if you if you pivot that will always give you like a memory kind of like spike.
+[11:25:53] Sundararajan, Pranesh: Yes, yes, that's there's a there's again, there's that tradeoff between the the memory and the the speed.
+[11:25:57] Sundararajan, Pranesh: Right. When we try to, especially with the Numpy vectorized calculations.
+[11:26:02] Sundararajan, Pranesh: We want these to be matrices.
+[11:26:06] Sundararajan, Pranesh: It's a squarish matrices.
+[11:26:08] Sundararajan, Pranesh: And so.
+[11:26:16] Conor (Unverified): And but just so I understand, like when you're querying them are they is, is that the form that they're in when they come in, or are you transforming them into that?
+[11:26:24] Sundararajan, Pranesh: So even when they come in, they are roughly in that in that shape. So like when like, no, no we're not.
+[11:26:26] Conor (Unverified): I mean, OK, OK.
+[11:26:38] Sundararajan, Pranesh: So so for example factor loadings for example, we, it's generally indexed by date and Security ID and then the columns you've got like 300 columns of of factors, right?
+[11:26:40] Sundararajan, Pranesh: So for any given date you've got like.
+[11:26:49] Sundararajan, Pranesh: 50,000 by 300 data frame like it's already pivoted and wide as opposed to like 50,000 * 300.
+[11:26:59] Sundararajan, Pranesh: Rows and one column, so they're all stored in the format that we want it to be. Roughly right?
+[11:27:05] Conor (Unverified): So has something already then queried that out of Snowflake and created like this format on S3?
+[11:27:07] Sundararajan, Pranesh: No, I mean the the S3.
+[11:27:17] Sundararajan, Pranesh: The S3 was just an example to say that to to like isolate where the you know the the time is being spent.
+[11:27:19] Sundararajan, Pranesh: Yeah, but we go directly to Snowflake.
+[11:27:23] Sundararajan, Pranesh: I mean, all all of our data is in Snowflake.
+[11:27:31] Sundararajan, Pranesh: My understanding is that under the hood, snowflake is really a bunch of pocket files and you know it it the the data is like stored.
+[11:27:34] Sundararajan, Pranesh: Somewhere on S3 like place maybe?
+[11:27:36] Sundararajan, Pranesh: Yeah, please correct me if I'm wrong.
+[11:27:46] Sundararajan, Pranesh: But my understanding is that it is stored on some kind of file system that is sort of like an SV bucket and then underlying it like, yeah.
+[11:27:48] Conor (Unverified): Yeah, I think.
+[11:27:52] Conor (Unverified): I mean, I haven't used snowflake that much, but they have their own like internal combiner.
+[11:27:58] Conor (Unverified): I mean you can use parquet as well, but they have their own sort of common.
+[11:28:00] Conor (Unverified): OK, so so.
+[11:28:02] Conor (Unverified): Sorry.
+[11:28:04] Sundararajan, Pranesh: So that that sorry, go ahead.
+[11:28:14] Conor (Unverified): No. So so the data that's been queried out is is in essentially the shape that you want when you're reading it from kind of S3, OK.
+[11:28:29] Conor (Unverified): So if you were able to just give me some sort of like kind of specs that correspond to that, that schema, and then, you know, just the columns, the row size and just, you know, approximate cardinality and then how many like, how many repetitions of those you know.
+[11:28:33] Conor (Unverified): Like, how are you trying to parallelize that?
+[11:28:37] Sundararajan, Pranesh: Yeah. Let me just make some notes for myself for follow-ups.
+[11:28:41] Sundararajan, Pranesh: Yep.
+[11:28:43] Conor (Unverified): OK.
+[11:28:47] Conor (Unverified): And so sorry, go.
+[11:28:59] Sundararajan, Pranesh: So. So that's why we're we're thinking about caching and we're like, OK is if there is something like you know the some sort of caching mechanism where?
+[11:29:14] Sundararajan, Pranesh: For a given sort of query ID like, if I can take my query and then convert it, convert that query string to an ID or something like that which says for some identifier something that identifier is the query that I'm running, and then we have that data.
+[11:29:18] Sundararajan, Pranesh: In a place that is.
+[11:29:22] Sundararajan, Pranesh: Much easier to access or faster to access.
+[11:29:24] Sundararajan, Pranesh: That would solve.
+[11:29:28] Sundararajan, Pranesh: The speed problem, right?
+[11:29:34] Sundararajan, Pranesh: But then we have to be very careful about things like how long does the cache live.
+[11:29:36] Sundararajan, Pranesh: How when does it get invalidated?
+[11:29:42] Sundararajan, Pranesh: Do we share the caches across users or do we have it for production for research?
+[11:29:49] Sundararajan, Pranesh: If the cache gets too big, what happens if it gets too?
+[11:29:57] Sundararajan, Pranesh: And then we want to be able to access it both this way and this way both as a time series and cross sectionally.
+[11:29:57] Sundararajan, Pranesh: So let's say I have.
+[11:30:01] Sundararajan, Pranesh: I've cached the data, but the data's all cached.
+[11:30:09] Sundararajan, Pranesh: As a cross section. But then I want to do something very sort of time series data from that cache.
+[11:30:11] Sundararajan, Pranesh: What is the solution there?
+[11:30:13] Sundararajan, Pranesh: Those are some of the questions that we've been.
+[11:30:15] Sundararajan, Pranesh: I mean, obviously we we don't have.
+[11:30:17] Conor (Unverified): So the OK so.
+[11:30:23] Sundararajan, Pranesh: A1 size fits all solution here, but yeah, those are the questions. The challenges that we're trying to grapple with.
+[11:30:32] Conor (Unverified): So is it the case that the data that you currently have stored is all in sort of cross-sectional form then?
+[11:30:34] Sundararajan, Pranesh: Yes.
+[11:30:34] Conor (Unverified): Right. OK.
+[11:30:36] Conor (Unverified): I see.
+[11:30:40] Sundararajan, Pranesh: Because for the most part. So in all factor modeling work.
+[11:30:44] Sundararajan, Pranesh: Date is a natural dimension over which we can parallelize.
+[11:30:50] Sundararajan, Pranesh: So that is just being the most.
+[11:30:52] Sundararajan, Pranesh: That that's the format that makes most sense.
+[11:30:54] Conor (Unverified): OK.
+[11:30:58] Sundararajan, Pranesh: That is, store everything by date parallelized by date, and then you know when we need time series.
+[11:31:14] Conor (Unverified): It's it's possible I've I've got this wrong because doing this from the outside, but my sort of understanding was that the way the data is modelled internally in Snowflake was sort of normalised form, right?
+[11:31:16] Haltiner, Chris: It's just to quickly jump in here.
+[11:31:21] Haltiner, Chris: Right now we have a couple of different snowflake databases. Some of them are normalized, some of them are white.
+[11:31:25] Conor (Unverified): OK, OK, I see. I see. I see.
+[11:31:27] Sundararajan, Pranesh: Ah yes, you're talking about the axiom versus the.
+[11:31:31] Haltiner, Chris: Not just Exuma versus Sparrow. We we have different.
+[11:31:35] Haltiner, Chris: We have different axioms of like instances with different schemas.
+[11:31:53] Conor (Unverified): Right. OK. So in, in the sort of like the kind of spec that Chris had given me, one of the things that or the fundamental thing really I guess that I did was basically creating from the normalized and materialized cross-sectional and time series.
+[11:32:05] Conor (Unverified): View but materialized right and I think that's the key because sort of if you're trying to convert from one like if you're trying to create either of those from normalized or even if, sorry.
+[11:32:18] Conor (Unverified): If you're trying to create cross-sectional or time series from normalized or even if you have cross-sectional and you're trying to create time series from that, you're always like it's sub optimal.
+[11:32:20] Conor (Unverified): So I think.
+[11:32:28] Conor (Unverified): The way to sort of really optimize or address that problem is to have it in both formats.
+[11:32:30] Haltiner, Chris: I would.
+[11:32:32] Conor (Unverified): So it's optimized for querying.
+[11:32:38] Haltiner, Chris: Probably I would would probably make a distinction between the optimal format for the data back and and the optimal format for a local cache.
+[11:32:42] Haltiner, Chris: I think for the data back end, you're absolutely right, Connor.
+[11:32:48] Haltiner, Chris: I would want to have both and. That's the only way that you can guarantee a fast speed for both.
+[11:32:53] Haltiner, Chris: Not obvious to me whether that needs to be the case for the local cache as well.
+[11:32:55] Haltiner, Chris: I think the question is a little bit.
+[11:32:59] Haltiner, Chris: What's really the volume of data that we anticipate being locally?
+[11:33:05] Haltiner, Chris: Cash my expectation would be and now all of that needs to be verified and made sure that that's actually the case.
+[11:33:11] Haltiner, Chris: But my very expectation would be that one it's gonna be much less data.
+[11:33:13] Haltiner, Chris: People are not gonna be interested in 50,000 securities of a global model.
+[11:33:19] Haltiner, Chris: People are gonna be interested in the securities that we actually hold positions in.
+[11:33:27] Haltiner, Chris: Also, the time window. Typically if you look at the last few months, that's probably gonna give a lot of the information that you need rather than the last 10 years.
+[11:33:27] Haltiner, Chris: So it's gonna be a smaller data set.
+[11:33:31] Haltiner, Chris: And there's probably.
+[11:33:33] Haltiner, Chris: Or different users will have different access patterns.
+[11:33:44] Haltiner, Chris: So if I put on a risk manager hat, then I primarily care about the cross-sectional view because I want to understand what's today's risk. Maybe how does it compare to yesterday's risk?
+[11:33:58] Haltiner, Chris: But it's really more more a cross-sectional view of the world. If I do some research in into the equity betas, you probably want to have more time series view where you're really digging into individual names and see how they move.
+[11:34:00] Haltiner, Chris: Through time.
+[11:34:04] Haltiner, Chris: So maybe a world where users can. I mean at that point it just gets a bit too complicated.
+[11:34:06] Haltiner, Chris: So that's probably not a good Ave. but.
+[11:34:22] Haltiner, Chris: 'Cause people will have very specific usage patterns and if it can just optimize some of that, people will be better off than not having a local cache.
+[11:34:25] Sundararajan, Pranesh: Agreed, I think separating.
+[11:34:29] Sundararajan, Pranesh: Yeah, there there's the optimal pattern to store it on the back end and then the how do we put it in the cache.
+[11:34:43] Sundararajan, Pranesh: You know, on, on that note, one solution or one potential solution that I worked with in the past is is a Redis cache that lives very close to wherever I'm computing things to the compute resource.
+[11:34:45] Sundararajan, Pranesh: And.
+[11:34:53] Sundararajan, Pranesh: That was one of the like, the best caching mechanisms that I've worked with in the past where, you know, Chrissy, are familiar with this as well, right?
+[11:34:55] Sundararajan, Pranesh: The SQL Server cache that we used to have at Blue Mountain.
+[11:34:59] Sundararajan, Pranesh: Alright, Tom, it was effectively the key.
+[11:35:06] Sundararajan, Pranesh: It would basically take the query string, convert that to a key right, and cache the results against that.
+[11:35:14] Sundararajan, Pranesh: So at least if you're running the same query like this exact query, I don't have to like change that.
+[11:35:20] Sundararajan, Pranesh: So now I could be querying for a subset of the data, in which case it will actually go to the full database even though I have the cache.
+[11:35:24] Sundararajan, Pranesh: There's no way to tell that the subset query is actually contained within my cache.
+[11:35:30] Sundararajan, Pranesh: But at least you know for that identical query. I don't go multiple times.
+[11:35:32] Conor (Unverified): And you hit that case a lot where you have the like repeat.
+[11:35:34] Sundararajan, Pranesh: Yes, we do. We, we.
+[11:35:38] Sundararajan, Pranesh: Yeah, we we hit that and and and we structure all our code around that such that.
+[11:35:50] Sundararajan, Pranesh: We would be running the same SQL queries so that we can hit the cache and then any kind of filtering we would do it inside. Like you know the pandas or inside inside the the local thing and so.
+[11:35:53] Sundararajan, Pranesh: Those it it had to for it to work.
+[11:35:59] Sundararajan, Pranesh: There was two things that had like, one is we had to structure our code such that the queries that we were running were all.
+[11:36:07] Sundararajan, Pranesh: You know the same like all different jobs, even though, like, one could be calculating portfolio volatility, the other could be doing PNL attribution.
+[11:36:15] Sundararajan, Pranesh: But the underlying query for the loadings are the same, so these two could be sharing the the cache.
+[11:36:25] Sundararajan, Pranesh: So I was wondering what your thoughts are around something like that in a like a remote coder environment.
+[11:36:27] Sundararajan, Pranesh: Is is that something that we could we could do?
+[11:36:29] Conor (Unverified): Yeah, I mean like the that.
+[11:36:42] Conor (Unverified): That that concept of, you know, sort of like the query kind of effectively being the key and you know the the response kind of being you know the result that gets given back.
+[11:36:44] Conor (Unverified): Like we use that.
+[11:36:52] Conor (Unverified): I mean here quite widely. We've got our own, you know, like sort of file based cache where we serve that up. But that's all sort of on Prem.
+[11:36:56] Conor (Unverified): So we don't maybe have so much the kind of.
+[11:36:58] Conor (Unverified): The speed issues.
+[11:37:08] Conor (Unverified): But yeah, I mean, if you're able to structure your query so that and there's a lot of repeated queries that are identical, then that's a natural sort of solution for that, right?
+[11:37:14] Sundararajan, Pranesh: Yeah, I would. You know, I would.
+[11:37:21] Sundararajan, Pranesh: Like to explore that that type of solution if if I don't what your thoughts are on.
+[11:37:31] Conor (Unverified): One other question from what you were describing, Panesh, if I understood correctly, it's like so the the parquet that that you're loading is predominantly in sort of cross-sectional format.
+[11:37:35] Conor (Unverified): So are are you reconstructing like time series queries from that?
+[11:37:39] Conor (Unverified): Then where you're having to load each one. Is that why you like it?
+[11:37:45] Conor (Unverified): So kind of multiplicative in terms of how many you're loading or.
+[11:37:49] Sundararajan, Pranesh: I mean, if we were to so.
+[11:37:53] Sundararajan, Pranesh: The the data itself is in Snowflake.
+[11:38:08] Sundararajan, Pranesh: It's in the snowflake tables and if we want a time series for like say 50 Security IDs, we pass on those 50 Security IDs and we only load it for those 50 security IDs, right?
+[11:38:12] Sundararajan, Pranesh: So that the the filter has the security IDs.
+[11:38:12] Sundararajan, Pranesh: Right.
+[11:38:24] Conor (Unverified): Right. So the cross-sectional, you're sort of, there's some extraction process against Snowflake to kind of persist that onto S3 and then you're loading those directly.
+[11:38:24] Sundararajan, Pranesh: No, sorry, sorry.
+[11:38:30] Sundararajan, Pranesh: I think I think, I mean confused us by talking about S3 earlier.
+[11:38:32] Sundararajan, Pranesh: That was more of an illustration or like an example to say that.
+[11:38:51] Sundararajan, Pranesh: To isolate the data transfer right from the actual queries like in some of our benchmarking exercises, you know we have some of these Security Master data just stored. As you know, files on S3 and I'm measuring how long it takes just to load that file.
+[11:38:59] Sundararajan, Pranesh: Without any query that is like that is to separate like the query time. So in any any sort of in any sort of like.
+[11:39:01] Sundararajan, Pranesh: Data loading.
+[11:39:11] Sundararajan, Pranesh: There's the query that we send across the timer takes to run that query on snowflake, then it gets the results and then it gives us the results back, right?
+[11:40:25] Sundararajan, Pranesh: Just give me the data back that takes just like transferring that data takes like 3 seconds for.
+[11:40:27] Conor (Unverified): OK.
+[11:40:27] Sundararajan, Pranesh: Yeah. So if I if for a query, yeah.
+[11:40:29] Sundararajan, Pranesh: So if I did it for a query that ends up becoming like 3 1/2 seconds or 4 seconds.
+[11:40:29] Sundararajan, Pranesh: So the bulk of the time is spent in the data transfer.
+[11:40:45] Conor (Unverified): Yes, if I can get like just some sort of like scoping of, you know, like how many like. So does this the kind of spec of the data frame itself? And then an idea of like the the kind of multiplicative aspect like you know like as in how?
+[11:40:55] Conor (Unverified): Much you were trying to parallelize that or you know how many you know, because so are you paralyzing some of that right now, or is that just that early stage?
+[11:41:00] Sundararajan, Pranesh: Yes, we parallelize to the extent that we can parallelize on one box.
+[11:41:04] Conor (Unverified): OK.
+[11:41:14] Haltiner, Chris: And quick note note on that with factor models as pronounced mentioned, parallelizing across states is a very natural way of doing it.
+[11:41:28] Haltiner, Chris: Parallelizing it across kind of security is a bunch of security tasks that usually leads to really bad bad outcomes. The way that the factor model math works because it's all matrix multiplications, it's actually really efficient to run it on one day across all securities, and it becomes quite.
+[11:41:30] Conor (Unverified): Right.
+[11:41:41] Haltiner, Chris: Delicate. If you try to break that up. So I wouldn't spend too much time trying to investigate parallelization across securities for the for the purpose of vector modeling infrastructure.
+[11:41:41] Conor (Unverified): OK.
+[11:41:43] Conor (Unverified): OK.
+[11:41:43] Conor (Unverified): That makes sense.
+[11:41:49] Conor (Unverified): That's your kind of atomic unit. The cross-sectional sort of piece, then really. OK.
+[11:41:53] Sundararajan, Pranesh: Like 10,000 securities by one day.
+[11:41:55] Sundararajan, Pranesh: Like, that's the atomic unit or.
+[11:41:57] Conor (Unverified): I mean that makes sense.
+[11:41:59] Conor (Unverified): That makes sense.
+[11:42:07] Conor (Unverified): So just again trying to get a sense for like, so how many times are you trying to do that atomic unit?
+[11:42:16] Conor (Unverified): Like in your average sort of, you know, like you kind of running what what you run every day. What what's your sort of workload?
+[11:42:22] Sundararajan, Pranesh: Yeah, so. So let's take a concrete example of like the beta calculator that I dropped, right?
+[11:42:22] Sundararajan, Pranesh: So for one day.
+[11:42:28] Sundararajan, Pranesh: So the beta is measures the sensitivity of any stock to any index, any benchmark, right?
+[11:42:32] Sundararajan, Pranesh: So, like Apple to SNP, how much does Apple move?
+[11:42:36] Sundararajan, Pranesh: Is if SNP rallies by like 1%.
+[11:42:46] Sundararajan, Pranesh: We typically for any given date, we calculate betas of about 50,000 stocks to about 50 benchmarks.
+[11:42:59] Sundararajan, Pranesh: Right. So for so and so those are those and it can be paralyzed over benchmark and so we can write 50 parallel processes.
+[11:43:03] Sundararajan, Pranesh: To calculate beta's of 50,000 stocks to one benchmark.
+[11:43:17] Sundararajan, Pranesh: But the 50,000 stocks to one benchmark we have to do it in one shot, to Chris's point, which is dividing that up by security ID generally leads to bad results because there's a lot of the map which depends on things like what is my average across.
+[11:43:29] Sundararajan, Pranesh: All securities. And so if I want to do things like what is my average across all securities in a parallelized by securities ID, then doing that average becomes a lot harder because I have to like think about.
+[11:43:31] Sundararajan, Pranesh: Talking different processes, talking to each other.
+[11:43:40] Sundararajan, Pranesh: So the natural choice there is to parallelize by benchmark or parallelize and and the calculation for each date is independent of the.
+[11:43:40] Sundararajan, Pranesh: Of any other date.
+[11:43:46] Sundararajan, Pranesh: So if I want to do a back fill of this over the last like year.
+[11:43:46] Conor (Unverified): And they're all 50,000.
+[11:43:48] Conor (Unverified): Are you calculating betas? Are all 50,000 for against each benchmark?
+[11:43:50] Sundararajan, Pranesh: Yes.
+[11:44:00] Conor (Unverified): OK. So that that's kind of your atomic kind of look in terms of data input then 50,000 is your sort of?
+[11:44:00] Sundararajan, Pranesh: Yes, right.
+[11:44:16] Sundararajan, Pranesh: And so for every date, every benchmark we want to load factor loadings, a return history, the benchmark constituents, that is, you know, explore the benchmark into its different the constituents weights and then market data, things like market cap, ad TV.
+[11:44:19] Sundararajan, Pranesh: Time series of that.
+[11:44:29] Sundararajan, Pranesh: Those become the raw inputs and then it goes through a bunch of math and then it produces like one number for each.
+[11:44:33] Sundararajan, Pranesh: Security and benchmark combination.
+[11:44:41] Conor (Unverified): One of the guys I think in is it like soul in the risks. Him last night was I think he's been working on this.
+[11:44:49] Conor (Unverified): So he was very proud by how much they've optimized it, kind of from what it was I think previously.
+[11:44:53] Conor (Unverified): I'm sure there's still further to go.
+[11:44:56] Conor (Unverified): OK.
+[11:44:56] Conor (Unverified): Sorry, carry on.
+[11:45:12] Sundararajan, Pranesh: Yep. Yeah. So, so that's that's something that would greatly benefit from this type of caching or like some sort of solution where. So let's say I've got I'm running data for today.
+[11:45:22] Sundararajan, Pranesh: And yesterday, right in terms for every stock we want to load the returns and market data for it.
+[11:45:30] Sundararajan, Pranesh: For the last like two years. So the only thing that different that that changes from one day to another is that one extra day's worth of data.
+[11:45:34] Sundararajan, Pranesh: So there's a huge amount of overlap between those two.
+[11:45:41] Sundararajan, Pranesh: The the input data that is necessary to calculate betas for today and for yesterday.
+[11:45:47] Sundararajan, Pranesh: Right now it'll run two separate queries to load that, and it'll it'll.
+[11:45:49] Sundararajan, Pranesh: Repeat all of that, right?
+[11:45:55] Sundararajan, Pranesh: So if there's a way to sort of cache that and like harmonize that and say.
+[11:46:01] Sundararajan, Pranesh: Well, I know that the input data for today is really the input data for yesterday.
+[11:46:05] Sundararajan, Pranesh: Plus one day.
+[11:46:07] Sundararajan, Pranesh: That would speed up the process.
+[11:46:11] Sundararajan, Pranesh: That's one way in which one place the types of things.
+[11:46:15] Sundararajan, Pranesh: So if I had a local of cache which can.
+[11:46:17] Sundararajan, Pranesh: Can give me?
+[11:46:30] Conor (Unverified): That's one of the things we sort of touched on with that Chris kind of surfaced with this idea of kind of having the kind of pre warmed cash and basically being able to sort of extend that you know.
+[11:46:32] Conor (Unverified): By.
+[11:46:48] Conor (Unverified): So, you know like not reload the whole thing, but if if there were just like a, you know it could be like a day or an additional couple of assets that were required being able to sort of query those and you know essentially union those together then.
+[11:46:54] Sundararajan, Pranesh: Yep.
+[11:47:01] Conor (Unverified): Yeah. So I mean this is all possible.
+[11:47:11] Conor (Unverified): It's just having, you know, the sort of the understanding of it and then, you know, agreeing on sort of technically kind of what's the best.
+[11:47:15] Conor (Unverified): The most optimal sort of implementation.
+[11:47:25] Sundararajan, Pranesh: Yeah, yeah. And and in going back to the sort of the Redis solution, if we had this Redis cache that was close to our environment.
+[11:47:27] Sundararajan, Pranesh: We would be.
+[11:47:31] Sundararajan, Pranesh: We would write our code such that we would query everything by date for a single date, right?
+[11:47:42] Sundararajan, Pranesh: And then the only thing that would be a cache miss is the one date, which is the new date that we have and that will actually go to the SQL Server, and then it'll or or. I'm sorry, I mean it'll go to Snowflake and it'll.
+[11:47:46] Sundararajan, Pranesh: Bring that one day's data back.
+[11:47:52] Sundararajan, Pranesh: Everything else will be cached and stored locally and then we can or close to local and.
+[11:47:54] Sundararajan, Pranesh: We just stitch those.
+[11:47:58] Sundararajan, Pranesh: I'll just like concatenate all those different dates together.
+[11:47:58] Conor (Unverified): No, I mean I think that makes sense.
+[11:48:06] Conor (Unverified): I mean, you're basically using a kind of server like side memory as as the cache really to make up for kind of.
+[11:48:08] Sundararajan, Pranesh: Yes.
+[11:48:12] Sundararajan, Pranesh: But I don't what that solution would be on a code or environment where like can we can we?
+[11:48:15] Conor (Unverified): It'll come down to your network then, right?
+[11:48:15] Sundararajan, Pranesh: Yeah, can.
+[11:48:17] Conor (Unverified): Like you just need to, yeah.
+[11:48:17] Sundararajan, Pranesh: Can we can we spin up something?
+[11:48:21] Sundararajan, Pranesh: Yes. Can we spin up something that is close to the?
+[11:48:23] Sundararajan, Pranesh: To the network.
+[11:48:29] Sundararajan, Pranesh: Sorry to close to the the closer to the environment, the code or environment.
+[11:48:41] Conor (Unverified): Well, those two instances, the cache and whatever coder is you'll you'll have to have sufficient net network bandwidth to be able to kind of get which you can specify, right.
+[11:48:45] Sundararajan, Pranesh: Yeah, yes, yes.
+[11:48:49] Conor (Unverified): That's not like huge amounts, but.
+[11:48:51] Conor (Unverified): I'm just curious. So what?
+[11:48:53] Conor (Unverified): What sort of do you remember?
+[11:48:54] Conor (Unverified): Like what?
+[11:48:58] Conor (Unverified): Kind of like like what size kind of Redis caches that?
+[11:49:02] Conor (Unverified): They had implemented no.
+[11:49:02] Sundararajan, Pranesh: I.
+[11:49:06] Sundararajan, Pranesh: I don't quite remember, Chris.
+[11:49:08] Sundararajan, Pranesh: Do you? Do you remember?
+[11:49:10] Sundararajan, Pranesh: It being a while, yeah.
+[11:49:10] Haltiner, Chris: Yeah. No, I I.
+[11:49:14] Sundararajan, Pranesh: And this was preclude world. This was a world, you know it was.
+[11:49:14] Conor (Unverified): Yeah.
+[11:49:16] Sundararajan, Pranesh: It was.
+[11:49:18] Conor (Unverified): We have a like an old actually it's probably even.
+[11:49:28] Conor (Unverified): Older technology called Gemfire, which basically is the same thing. It's like a distributed sort of like hash map, basically right where you can.
+[11:49:28] Sundararajan, Pranesh: Yes, exactly.
+[11:49:35] Sundararajan, Pranesh: That's effectively what we want. A distributed hash map.
+[11:49:37] Conor (Unverified): Baz.
+[11:49:39] Conor (Unverified): OK, OK.
+[11:49:41] Conor (Unverified): Umm.
+[11:49:55] Conor (Unverified): OK, never. I sort of understand a little bit more, I think probably the that does make you know that is if you're struggling, can if if you've been able to demonstrate to yourself that after optimizing Snowflake.
+[11:49:55] Sundararajan, Pranesh: Hmm.
+[11:50:01] Conor (Unverified): You know, it's really coming down to just the kind of need speeds from S3.
+[11:50:05] Conor (Unverified): I mean, you can parallelize that and you to maintain whatever that is.
+[11:50:10] Conor (Unverified): So that's sort of maybe one way I would think to explore at least initially.
+[11:50:24] Conor (Unverified): But then if you want to reduce that then you know we could look at what can we get that down to if you have that sort of in Redis you know that's prime from S3
+[11:50:32] Sundararajan, Pranesh: Yep, Yep, Yep.
+[11:50:34] Conor (Unverified): Um.
+[11:50:38] Conor (Unverified): Reasonable and sort of doable. I don't really see.
+[11:50:40] Sundararajan, Pranesh: OK.
+[11:50:42] Conor (Unverified): Have they had any experience using Redis? Soros do you know?
+[11:50:46] Sundararajan, Pranesh: I don't think not that I know of.
+[11:50:50] Sundararajan, Pranesh: I mean, we may have experimented with the past, but in the time that I've been here.
+[11:50:55] Sundararajan, Pranesh: I don't see us using Redis anywhere.
+[11:50:59] Conor (Unverified): OK, but that means it's fairly standard, so it's not.
+[11:51:01] Sundararajan, Pranesh: Yeah.
+[11:51:05] Conor (Unverified): And lots of people run that on AWS so.
+[11:51:07] Conor (Unverified): Umm.
+[11:51:11] Conor (Unverified): But yeah, you have to, I think, pay for it again, but.
+[11:51:17] Sundararajan, Pranesh: No, but if if we can demonstrate that it can bring that 3 seconds down to like near.
+[11:51:21] Sundararajan, Pranesh: Closest speed data you know.
+[11:51:25] Conor (Unverified): You should be less than that if you've got the appropriate. If you've got the appropriate like network, you should be able to.
+[11:51:27] Conor (Unverified): Yeah, I mean definitely beat that.
+[11:51:27] Sundararajan, Pranesh: Then I think it is.
+[11:51:34] Sundararajan, Pranesh: Yeah, the the one thing here that I've noticed is that we don't try to reinvent the wheel.
+[11:51:40] Sundararajan, Pranesh: So if there's a product that's out there that gives us what we want, we will license it and we'll get it.
+[11:51:42] Sundararajan, Pranesh: So so if we can show that, yeah.
+[11:51:48] Sundararajan, Pranesh: So if we if we can show that Redis can bring the you know the the cache time the the loading time.
+[11:51:54] Sundararajan, Pranesh: Down by a factor of five or factor of 10 then yeah.
+[11:51:54] Conor (Unverified): Or maybe that's why I should have a go at them, right?
+[11:51:54] Sundararajan, Pranesh: Yeah.
+[11:51:58] Conor (Unverified): Like as just as initially. If you can give me kind of like spec forward just like you know a commensurate.
+[11:52:08] Conor (Unverified): Data frame and I can sort of show to you what that is in parquet or kind of arrow or kind of you know feather just to make sure that it's equivalent.
+[11:52:13] Conor (Unverified): Then we can look at how quickly.
+[11:52:15] Sundararajan, Pranesh: Let me do that.
+[11:52:17] Sundararajan, Pranesh: Yeah, let let me do that.
+[11:52:25] Sundararajan, Pranesh: Let me create some data with. Let me. Alright, let me write a script that creates random data, right?
+[11:52:37] Sundararajan, Pranesh: And then and then we can think about like that data on my local drive, that data on S3, that data stored as a table of snowflake and how does that the same random data?
+[11:52:39] Conor (Unverified): How they will stack up?
+[11:52:39] Conor (Unverified): Yeah, no.
+[11:52:39] Sundararajan, Pranesh: How do I add that?
+[11:52:41] Conor (Unverified): I mean, that's the way to approach this.
+[11:52:47] Conor (Unverified): It's much better to be sort of data-driven than any other way, right? And just.
+[11:52:49] Conor (Unverified): So we can. Yeah, I'm very happy to.
+[11:52:52] Sundararajan, Pranesh: Yeah.
+[11:52:52] Conor (Unverified): Do that.
+[11:52:54] Sundararajan, Pranesh: Awesome.
+[11:52:56] Conor (Unverified): OK. Sounds like a plan.
+[11:53:02] Conor (Unverified): So sorry, it just took me a while to couple of.
+[11:53:04] Sundararajan, Pranesh: No, no, this is this is great these conversations.
+[11:53:10] Sundararajan, Pranesh: I'm sure we'll have more of these conversations. We'll only have more of them.
+[11:53:12] Sundararajan, Pranesh: And yeah, as we as we ramp up.
+[11:53:18] Sundararajan, Pranesh: Are you taking any time off between now and?
+[11:53:18] Conor (Unverified): I'm actually on Friday.
+[11:53:20] Conor (Unverified): I'm at the family.
+[11:53:24] Conor (Unverified): We're going to Bali so yeah, so.
+[11:53:31] Haltiner, Chris: I hope you get some time to to enjoy Bali and not just think about caching issue and.
+[11:53:35] Conor (Unverified): Yeah, I will do.
+[11:53:37] Conor (Unverified): I will do I'm sure.
+[11:53:37] Sundararajan, Pranesh: Yeah, volley is really nice.
+[11:53:43] Sundararajan, Pranesh: I've I've been there for a wedding once. And yeah, the OK, yeah.
+[11:53:45] Conor (Unverified): It's really nice.
+[11:53:47] Sundararajan, Pranesh: It's nice, yeah.
+[11:53:55] Conor (Unverified): Yeah, we could do some diving cause I've got two teenage boys. So it's one of the few things that the teenagers like to do with mum and dad. So there's not that many.
+[11:53:59] Sundararajan, Pranesh: Yeah, I'm going to have a teenager on my hands in like, one week.
+[11:54:01] Sundararajan, Pranesh: So he's.
+[11:54:03] Conor (Unverified): Ah, there you go.
+[11:54:14] Sundararajan, Pranesh: And yeah, I totally get that point where it's not cool to, you know, hang out with parents anymore.
+[11:54:22] Sundararajan, Pranesh: Yeah, we dropped off my son at summer camp last weekend, and it's like a stay there type of camp and he couldn't wait for us to leave.
+[11:54:24] Sundararajan, Pranesh: It'll be like he couldn't wait for us.
+[11:54:26] Conor (Unverified): Don't embarrass me.
+[11:54:26] Sundararajan, Pranesh: Like just just very politely big.
+[11:54:28] Sundararajan, Pranesh: Like no leave.
+[11:54:30] Conor (Unverified): Yeah, yeah, yeah, yeah.
+[11:54:32] Conor (Unverified): Yeah, your excess baggage.
+[11:54:36] Conor (Unverified): Yeah.
+[11:54:40] Sundararajan, Pranesh: Alright, alright, awesome. Thank you.
+[11:54:40] Conor (Unverified): OK.
+[11:54:44] Haltiner, Chris: Connor. Connor. I'm gonna let you take the lead in terms of more calls and everything like that.
+[11:54:46] Haltiner, Chris: Just reach out whenever you feel like you wanna talk about something.
+[11:54:48] Conor (Unverified): Yep, Yep. Cool.
+[11:54:49] Sundararajan, Pranesh: Yeah. Yeah, absolutely. Yeah, that's all.
+[11:54:51] Conor (Unverified): I will do OK. And you just whenever you've got time, finish it.
+[11:54:55] Conor (Unverified): Be great if you could get us that over and then cool.
+[11:55:01] Sundararajan, Pranesh: Yeah, that's homework for me to send you script that generates random data and then what that looks like right now for us local office.
+[11:55:09] Conor (Unverified): And if you can just confirm what what you see it you know size wise being on your side, I'm sure it'll be the the same for me, but just yeah, OK.
+[11:55:09] Sundararajan, Pranesh: Yeah, I'll, I'll do that.
+[11:55:09] Haltiner, Chris: All right.
+[11:57:10] Haltiner, Chris: Thanks everyone
